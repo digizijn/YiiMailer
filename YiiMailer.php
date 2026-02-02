@@ -1,9 +1,9 @@
-<?
+<?php
 /**
  * YiiMailer class - wrapper for PHPMailer
  * Yii extension for sending emails using views and layouts
  * https://github.com/vernes/YiiMailer
- * Copyright (c) 2013 YiiMailer
+ * Copyright (c) 2014 YiiMailer
  * 
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -22,11 +22,12 @@
  *
  * @package YiiMailer
  * @author Vernes Šiljegović
- * @copyright  Copyright (c) 2013 YiiMailer
+ * @copyright  Copyright (c) 2014 YiiMailer
  * @license    http://www.gnu.org/licenses/old-licenses/lgpl-2.1.txt	LGPL
- * @version 1.5, 2013-06-03
+ * @version 2.0.0, 2018-02-06
  */
 
+use PHPMailer\PHPMailer\PHPMailer;
 
 
 class YiiMailer extends PHPMailer {
@@ -36,31 +37,29 @@ class YiiMailer extends PHPMailer {
 	 * @var string
 	 */
 	public $CharSet='UTF-8';
-	
-	/**
-	 * Sets the text-only body of the message.
-	 * @var string
-	 */
-	public $AltBody='';
-	
+
 	/**
 	 * Default paths and private properties
 	 */
-	private $viewPath='application.views.mail';
+    protected $viewPath = 'application.views.mail';
 	
-	private $layoutPath='application.views.mail.layouts';
+    protected $layoutPath = 'application.views.mail.layouts';
 	
-	private $baseDirPath='webroot.images.mail';
+    protected $baseDirPath = 'webroot.images.mail';
 
-	private $testMode=false;
+    protected $testMode = false;
 
-	private $savePath='webroot.assets.mail';
+    protected $savePath = 'webroot.assets.mail';
 	
-	private $layout;
+	protected $layout;
 	
-	private $view;
+	protected $view;
+
+    protected $textView;
+
+    protected $altText;
 	
-	private $data;
+	protected $data;
 	
 	/**
 	 * Constants
@@ -110,28 +109,62 @@ class YiiMailer extends PHPMailer {
 	/**
 	 * Set the view to be used
 	 * @param string $view View file
-	 * @throws CException 
+     * @param string $type The view type: 'HTML' or 'Text'
+	 * @throws CException
 	 */
-	public function setView($view)
+    public function setView($view, $type = "HTML")
 	{
-		if($view!='')
-		{
+        if (!empty($view)) {
 			if(!is_file($this->getViewFile($this->viewPath.'.'.$view)))
 
 				throw new CException('View "'.$view.'" not found');
-			$this->view=$view;
+
+            switch ($type) {
+                case "HTML":
+			        $this->view=$view;
+                    break;
+                case "Text":
+                    $this->textView = $view;
+            }
 		}
 	}
+
+    /**
+     * Get currently used view
+     * @return string HTML View filename
+     */
+    public function getView()
+    {
+        return $this->view;
+    }
+
+    /**
+     * Set the HTML view to be used
+     * @param string $view HTML View file
+     */
+    public function setHTMLView($view)
+    {
+        $this->setView($view, "HTML");
+    }
 	
-	/**
-	 * Get currently used view
-	 * @return string View filename
-	 */
-	public function getView()
-	{
-		return $this->viewPath.'.'.$this->view;
-	}
-	
+    /**
+     * Set the Text view to be used
+     * @param string $view Text View file
+     */
+    public function setTextView($view)
+    {
+        $this->setView($view, "Text");
+    }
+
+    /**
+     * Get currently used text view
+     * @return string Text View filename
+     */
+    public function getTextView()
+    {
+        $this->textView;
+    }
+
 	/**
 	 * Clear currently used view
 	 */
@@ -139,6 +172,24 @@ class YiiMailer extends PHPMailer {
 	{
 		$this->view=null;
 	}
+
+    /**
+     * Set the alt body text to be applied to $AltBody
+     * @param string $text
+     */
+    public function setAltText($text = '')
+    {
+        $this->altText = $text;
+    }
+
+    /**
+     * Get the alt body text to be applied to $AltBody
+     * @return string the text to be applied to $altBody
+     */
+    public function getAltText()
+    {
+        $this->altText;
+    }
 
 	/**
 	 * Send data to be used in mail body
@@ -270,7 +321,7 @@ class YiiMailer extends PHPMailer {
 	 */
 	public function setFrom($address, $name = '', $auto = true)
 	{
-		return parent::SetFrom($address, $name, (int)$auto);
+        return parent::setFrom($address, $name, (bool)$auto);
 	}
 
 	/**
@@ -284,7 +335,7 @@ class YiiMailer extends PHPMailer {
 	 */
 	public function setTo($addresses)
 	{
-		$this->ClearAddresses();
+        $this->clearAddresses();
 		return $this->setAddresses('to',$addresses);
 	}
 
@@ -295,7 +346,7 @@ class YiiMailer extends PHPMailer {
 	 */
 	public function setCc($addresses)
 	{
-		$this->ClearCCs();
+        $this->clearCCs();
 		return $this->setAddresses('cc',$addresses);
 	}
 
@@ -306,7 +357,7 @@ class YiiMailer extends PHPMailer {
 	 */
 	public function setBcc($addresses)
 	{
-		$this->ClearBCCs();
+        $this->clearBCCs();
 		return $this->setAddresses('bcc',$addresses);
 	}
 
@@ -317,7 +368,7 @@ class YiiMailer extends PHPMailer {
 	 */
 	public function setReplyTo($addresses)
 	{
-		$this->ClearReplyTos();
+        $this->clearReplyTos();
 		return $this->setAddresses('Reply-To',$addresses);
 	}
 
@@ -337,9 +388,9 @@ class YiiMailer extends PHPMailer {
 		$result=true;
 		foreach ($addresses as $key => $value) {
 			if(is_int($key))
-				$r=$this->AddAnAddress($type,$value);
+                $r = $this->addAnAddress($type, $value);
 			else
-				$r=$this->AddAnAddress($type,$key,$value);
+                $r = $this->addAnAddress($type, $key, $value);
 			if($result && !$r)
 				$result=false;
 		}
@@ -382,9 +433,9 @@ class YiiMailer extends PHPMailer {
 		$result=true;
 		foreach ($attachments as $key => $value) {
 			if(is_int($key))
-				$r=$this->AddAttachment($value);
+                $r = $this->addAttachment($value);
 			else
-				$r=$this->AddAttachment($key,$value);
+                $r = $this->addAttachment($key, $value);
 			if($result && !$r)
 				$result=false;
 		}
@@ -397,9 +448,9 @@ class YiiMailer extends PHPMailer {
 	 */
 	public function clear()
 	{
-		$this->ClearAllRecipients();
-		$this->ClearReplyTos();
-		$this->ClearAttachments();
+        $this->clearAllRecipients();
+        $this->clearReplyTos();
+        $this->clearAttachments();
 	}
 
 	/**
@@ -497,6 +548,13 @@ class YiiMailer extends PHPMailer {
 			//no layout
 			$this->MsgHTML($this->Body, EO::getPathOfAlias($this->baseDirPath));
 		}
+
+        //render alt body if specified
+        if (isset($this->textView)) {
+            $this->AltBody = $this->renderView($this->viewPath . '.' . $this->textView, $this->data);
+        } elseif (isset($this->altText)) {
+            $this->AltBody = $this->altText;
+        }
 	}
 	
 	/**
@@ -506,7 +564,7 @@ class YiiMailer extends PHPMailer {
 	 */
 	protected function MsgHTMLWithLayout($message, $basedir = '')
 	{
-		$this->MsgHTML($this->renderView($this->layoutPath.'.'.$this->layout, ['content'=>$message,'data'=>$this->data]), $basedir);
+		$this->msgHTML($this->renderView($this->layoutPath.'.'.$this->layout, ['content'=>$message,'data'=>$this->data]), $basedir);
 	}
 
 	/**
@@ -521,17 +579,17 @@ class YiiMailer extends PHPMailer {
 		//send the message
 		try{
 			//prepare the message
-			if(!$this->PreSend())
+			if(!$this->preSend())
 				return false;
 
 			//in test mode, save message as a file
 			if($this->testMode)
 				return $this->save();
 			else
-				return $this->PostSend();
-		} catch (phpmailerException $e) {
+				return $this->postSend();
+		} catch (Exception $e) {
 			$this->mailHeader = '';
-			$this->SetError($e->getMessage());
+			$this->setError($e->getMessage());
 			if ($this->exceptions) {
 				throw $e;
 			}
@@ -545,23 +603,49 @@ class YiiMailer extends PHPMailer {
 	 */
 	public function save()
 	{
-		$filename = date('YmdHis') . '_' . uniqid() . '.eml';
-		$dir = EO::getPathOfAlias($this->savePath);
-		//check if dir exists and is writable
-		if(!is_writable($dir))
-			throw new CException('Directory "'.$dir.'" does not exist or is not writable!');
+        $filename = date('YmdHis') . (!empty($this->view) ? '_' . $this->view : '') . '_' . uniqid() . '.eml';
+        $dir = Yii::getPathOfAlias($this->savePath);
+
+        // Create a directory
+        if (!is_dir($dir)) {
+            $oldmask = @umask(0);
+            $result = @mkdir($dir, 0777);
+            @umask($oldmask);
+            if (!$result) {
+                throw new CException('Unable to create the directory ' . $dir);
+            }
+        }
 
 		try {
 			$file = fopen($dir . DIRECTORY_SEPARATOR . $filename,'w+');
-			fwrite($file, $this->GetSentMIMEMessage());
+            fwrite($file, $this->getSentMIMEMessage());
 			fclose($file);
 
 			return true;
 		} catch(Exception $e) {
-			$this->SetError($e->getMessage());
+            $this->setError($e->getMessage());
 
 			return false;
 		}
 	}
 
+    /**
+     * Setup SMTP and use it to send email
+     * @param string $host SMTP hosts, either a single hostname or multiple semicolon-delimited hostnames
+     * @param int $port The default SMTP server port
+     * @param string $secure The secure connection prefix. Options: "", "ssl" or "tls"
+     * @param boolean $auth Whether to use SMTP authentication
+     * @param string $username SMTP username
+     * @param string $password SMTP password
+     */
+    public function setSmtp($host = 'localhost', $port = 25, $secure = '', $auth = false, $username = '', $password = '')
+    {
+        $this->isSMTP();
+        $this->Host = $host;
+        $this->Port = $port;
+        $this->SMTPSecure = $secure;
+        $this->SMTPAuth = $auth;
+        $this->Username = $username;
+        $this->Password = $password;
+    }
 }
