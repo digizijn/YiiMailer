@@ -648,4 +648,15 @@ class YiiMailer extends PHPMailer {
         $this->Username = $username;
         $this->Password = $password;
     }
+
+
+	public function addAttachment($path, $name = '', $encoding = 'base64', $type = '', $disposition = 'attachment')
+	{
+		return parent::addAttachment($path, $name);
+	}
+
+	public function addStringAttachment($string, $filename, $encoding = 'base64', $type = '', $disposition = 'attachment')
+	{
+		return parent::addStringAttachment($string, $filename);
+	}
 }
