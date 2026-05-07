@@ -135,7 +135,7 @@ class YiiMailer extends PHPMailer {
      */
     public function getView()
     {
-        return $this->view;
+        return $this->viewPath.'.'.$this->view;
     }
 
     /**
